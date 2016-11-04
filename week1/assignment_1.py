@@ -33,9 +33,14 @@ age = years_old
 smoke = input("Do you smoke? (yes/no)\n")
 # we consider these values as true, others are false
 smoke = smoke.lower() in ("y", "yes", "true", "t", "1")
+smoke_answer = ""
+if smoke:
+    smoke_answer = "yes"
+else:
+    smoke_answer = "no"
 
-print("It was nice talking to you. Let me summarize what I learnt about you.\n"
+print("It was nice talking to you. Let me summarise what I learnt about you.\n"
       "Your given name is {}.\n"
       "Your surname is {}.\n"
       "You are {} years old.\n"
-      "Smokers: {}".format("".join(first_name), " ".join(other_names), age, smoke))
+      "Smoker: {}".format("".join(first_name), " ".join(other_names), age, smoke_answer))
