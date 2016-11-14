@@ -3,8 +3,8 @@ from operator import itemgetter
 
 c = collections.Counter()
 
-#file_path = input("Complete file-path, please: ")
-file_path = "war_and_peace.txt"
+file_path = input("Complete file-path, please: ")
+#file_path = "war_and_peace.txt"
 with open(file_path) as input_file:
     for line in input_file:
         c.update(line.lower().split())
