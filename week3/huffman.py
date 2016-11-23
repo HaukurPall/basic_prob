@@ -56,7 +56,7 @@ def average_code_word_length():
     complete_list = counter.most_common()
     sum = 0.0
     for letter, count in complete_list:
-        # sum of ( probability * length ), probability = count/total
+        #     probability = count/total, ( probability * length )
         sum += (float(count)/total) * len(encoding_map[letter])
     return sum
 

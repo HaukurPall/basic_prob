@@ -60,11 +60,18 @@ def log_subtract_list(list_of_numbers):
 
     :param list_of_numbers: A list of logarithmically transformed numbers.
     """
-    return reduce((lambda x, y: log_subtract(x, y)), list_of_numbers, -math.inf)
+    if len(list_of_numbers) == 0:
+        return -math.inf
+    if len(list_of_numbers) == 1:
+        return list_of_numbers[0]
+    first_value = list_of_numbers.pop(0)
+    rest_summed_up = log_add_list(list_of_numbers)
+    return log_subtract(first_value, rest_summed_up)
 
 
 # My tests
 print("Addition")
+print(str( math.log(0.5)))
 logs = [math.log(0.5), math.log(0.5), -math.inf]
 print(log_add(logs[0], logs[1]))
 print(log_add_list(logs))
@@ -76,8 +83,14 @@ logs = []
 print(log_add_list(logs))
 print("Subtraction")
 logs = [math.log(0.5), math.log(0.5), -math.inf]
+print("be -inf")
 print(log_subtract(logs[0], logs[1]))
+print(log_subtract(logs[1], logs[2]))
+print("be -inf")
 print(log_subtract_list(logs))
+logs = [math.log(0.5), -math.inf]
+print(log_subtract_list(logs))
+print("be -inf")
 logs = [math.log(2.0), math.log(0.5), math.log(0.5), math.log(0.5), math.log(0.5)]
 print(log_subtract_list(logs))
 logs = [-math.inf]
