@@ -1,7 +1,7 @@
 import math
 
 from functools import reduce
-
+delta = 0.0000000001
 
 def log_add(c, d):
     """Adds two numbers in their logarithmic transformtions.
@@ -41,15 +41,19 @@ def log_subtract(c, d):
     """
     if type(c) != float or type(c) != float:
         return "Error! Input to log_subtract is not float {} + {}".format(c, d)
+    # as suggest we return the other number simply
     if c == -math.inf:
         return d
     if d == -math.inf:
         return c
-    # we have c = log(a) and d = log(b). We want to compute log(a + b)
+    # we have c = log(a) and d = log(b). We want to compute log(a - b)
     # To do this we compute c + log(1 - exp(d − c)) as suggested in script.
     if c > d:
         return c + math.log1p(-math.exp(d - c))
     elif c == d:
+        return -math.inf
+    # if the numbers we want to subtract from each other are very close to each other we just return -math.inf
+    elif d - c < delta:
         return -math.inf
     else:
         return "Error! Input to log_subtract {} < {}".format(c, d)

@@ -1,7 +1,10 @@
-numbers = [x for x in range(1, 101)]
-listofnumbers = ""
-for number in numbers:
-    listofnumbers += str(number)
-print(listofnumbers)
-print(numbers[:10])
-print(listofnumbers[-21:])
+import math
+sum = 0
+i = 0
+p=0.6
+while sum > math.log2(0.9):
+    log_sum = math.log2(math.pow(p, 25-i))+math.log2(math.pow(1-p, i))
+    sum += log_sum
+    i += 1
+
+print(str(i))
