@@ -3,6 +3,7 @@ import math
 from functools import reduce
 delta = 0.0000000001
 
+
 def log_add(c, d):
     """Adds two numbers in their logarithmic transformtions.
 
@@ -71,33 +72,3 @@ def log_subtract_list(list_of_numbers):
     first_value = list_of_numbers.pop(0)
     rest_summed_up = log_add_list(list_of_numbers)
     return log_subtract(first_value, rest_summed_up)
-
-
-# My tests
-print("Addition")
-print(str( math.log(0.5)))
-logs = [math.log(0.5), math.log(0.5), -math.inf]
-print(log_add(logs[0], logs[1]))
-print(log_add_list(logs))
-logs = [math.log(0.5), math.log(0.5), math.log(0.5), math.log(0.5), math.log(0.5)]
-print(log_add_list(logs))
-logs = [-math.inf]
-print(log_add_list(logs))
-logs = []
-print(log_add_list(logs))
-print("Subtraction")
-logs = [math.log(0.5), math.log(0.5), -math.inf]
-print("be -inf")
-print(log_subtract(logs[0], logs[1]))
-print(log_subtract(logs[1], logs[2]))
-print("be -inf")
-print(log_subtract_list(logs))
-logs = [math.log(0.5), -math.inf]
-print(log_subtract_list(logs))
-print("be -inf")
-logs = [math.log(2.0), math.log(0.5), math.log(0.5), math.log(0.5), math.log(0.5)]
-print(log_subtract_list(logs))
-logs = [-math.inf]
-print(log_subtract_list(logs))
-logs = []
-print(log_subtract_list(logs))
