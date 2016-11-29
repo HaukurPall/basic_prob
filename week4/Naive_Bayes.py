@@ -1,11 +1,13 @@
 from collections import Counter
+from functools import reduce
+import math
 
 
 class Naive_Bayes(object):
     '''
     This class implements a naive bayes classifier.
     '''
-    
+
     def __init__(self):
         '''
         Constructor
@@ -16,6 +18,9 @@ class Naive_Bayes(object):
         self.feature_probs = dict()
         self.vocabulary = set()
 
+        self.label_log_probs = dict()
+        self.label_feature_log_probs = dict()
+
     def train(self, data, label):
         '''
         Train the classifier by counting features in the data set.
@@ -25,7 +30,7 @@ class Naive_Bayes(object):
         '''
         for line in data:
             self.add_feature_counts(line.split(), label)
-    
+
     def add_feature_counts(self, features, label):
         '''
         Count the features in a feature list.
@@ -33,40 +38,56 @@ class Naive_Bayes(object):
         :param features: a list of features.
         :param label: the label of the data file from which the features were extracted.
         '''
-        pass
+        for feature in features:
+            self.vocabulary.add(feature)
+            if label not in self.feature_probs:
+                self.feature_probs[label] = Counter()
+            self.feature_probs[label].update([feature])
 
     def smooth_feature_counts(self, smoothing=1):
         '''Smooth the collected feature counts
 
         :param smoothing: The smoothing constant
         '''
-        # TODO: implement this!
-        pass
-        
-    def update_label_count(self,label):
+        for feature in self.vocabulary:
+            for label in self.feature_probs.keys():
+                if feature not in self.feature_probs[label]:
+                    self.feature_probs[label][feature] = smoothing
+                elif self.feature_probs[label][feature] < smoothing:
+                    self.feature_probs[label][feature] = smoothing
+
+    def update_label_count(self, label):
         '''
         Increase the count for the supplied label by 1.
         
         :param label: The label whose count is to be increased.
         '''
         self.label_probs.update([label])
-        
+
     def log_normalise_label_probs(self):
         '''
         Normalize the label counts to probabilities and transform them to logprobs.
         '''
         # Hint: you can assign a new value to label to label_probs or do the normalisation in place
-        # TODO: Implement this!
-        pass
-            
+        label_list = self.label_probs.most_common()
+        total_labels = reduce(lambda current, count: current+count[1], label_list, 0)
+        for (x, y) in label_list:
+            self.label_log_probs[x] = math.log2(float(y)/total_labels)
+
     def log_normalise_feature_probs(self):
         '''
         Normalize the feature counts for each label to probabilities and turn them into logprobs.
         '''
-        # TODO: Implement this!
         # Hint: you can assign a new value to label to feature_probs or do the normalisation in place
-        pass
-                
+        # for each label we have to go through each counter
+        for label in self.feature_probs.keys():
+            self.label_feature_log_probs[label] = dict()
+            # for each counter we have to get the total count and assign the log-prob to the feature
+            feature_counter = self.feature_probs[label].most_common()
+            total_features = reduce(lambda current, count: current+count[1], feature_counter, 0)
+            for (x, y) in feature_counter:
+                self.label_feature_log_probs[label][x] = math.log2(float(y)/total_features)
+
     def predict(self, data):
         ''' 
         Predict the most probable label according to the model on a stream of data.
@@ -74,5 +95,43 @@ class Naive_Bayes(object):
         :param data: A stream of string data from which to extract features
         :return: the most probable label for the data
         '''
-        # TODO: implement this!
-        pass 
+        total_probs = dict()
+        for line in data:
+            for feature in line.split():
+                if feature not in self.vocabulary:
+                    # we only understand our vocabulary
+                    continue
+                # we now need to find in which label this feature is most likely to occur
+                # relative to the probability of the the probability of the label
+
+                #P(Y|X^n)~P(Y)*P(X1|Y)*...*P(Xn|Y)
+                for label in self.label_log_probs.keys():
+                    if feature in self.label_feature_log_probs[label]:
+                        if label not in total_probs:
+                            # initialize total probs lazily
+                            total_probs[label] = 0.0
+                        # "multiply" log-probabilities together
+                        probability = self.label_feature_log_probs[label][feature] + self.label_log_probs[label]
+                        total_probs[label] = log_add(total_probs[label], probability)
+        # label = max(P_lable * P_feature,lable)
+        most_likely_label_value = -math.inf
+        most_likely_label = None
+        for label in total_probs.keys():
+            if total_probs[label] > most_likely_label_value:
+                most_likely_label = label
+        return most_likely_label
+
+
+def log_add(a,b):
+    '''Adds to numbers in their logarithmic transformtions.
+
+    :param a: The first logarithmically transformed number.
+    :param b: The second logarithmically transformed number.
+    :return: The log-sum of the two numbers
+    '''
+    if b == -math.inf:
+        return a
+    if a == -math.inf:
+        return b
+
+    return a + math.log1p(math.exp(b-a))
