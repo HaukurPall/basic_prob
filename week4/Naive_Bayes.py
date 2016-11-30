@@ -109,16 +109,16 @@ class Naive_Bayes(object):
                     if feature in self.label_feature_log_probs[label]:
                         if label not in total_probs:
                             # initialize total probs lazily
-                            total_probs[label] = 0.0
+                            total_probs[label] = 0.0 + self.label_log_probs[label]
                         # "multiply" log-probabilities together
-                        probability = self.label_feature_log_probs[label][feature] + self.label_log_probs[label]
-                        total_probs[label] = log_add(total_probs[label], probability)
+                        total_probs[label] += self.label_feature_log_probs[label][feature]
         # label = max(P_lable * P_feature,lable)
         most_likely_label_value = -math.inf
         most_likely_label = None
         for label in total_probs.keys():
             if total_probs[label] > most_likely_label_value:
                 most_likely_label = label
+                most_likely_label_value = total_probs[label]
         return most_likely_label
 
 

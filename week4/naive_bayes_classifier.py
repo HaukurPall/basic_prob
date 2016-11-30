@@ -7,12 +7,10 @@ Created on Sep 23, 2015
 import sys
 import argparse
 from datetime import datetime
-# TODO: replace <package> by the name of the package that you store these files in
 from week4.Naive_Bayes import Naive_Bayes
 from os import listdir, remove, system
 from os.path import isfile, join
 
-# TODO: Please the command that you use to call Python in the terminal here
 my_python = "python3"
 
 def train_model(corpus_dir, classifier):
