@@ -29,7 +29,7 @@ class Naive_Bayes(object):
         :param label: The label of the data
         '''
         for line in data:
-            self.add_feature_counts(line.split(), label)
+            self.add_feature_counts(line.lower().split(), label)
 
     def add_feature_counts(self, features, label):
         '''
@@ -53,8 +53,8 @@ class Naive_Bayes(object):
             for label in self.feature_probs.keys():
                 if feature not in self.feature_probs[label]:
                     self.feature_probs[label][feature] = smoothing
-                elif self.feature_probs[label][feature] < smoothing:
-                    self.feature_probs[label][feature] = smoothing
+                else:
+                    self.feature_probs[label][feature] += smoothing
 
     def update_label_count(self, label):
         '''
@@ -97,7 +97,7 @@ class Naive_Bayes(object):
         '''
         total_probs = dict()
         for line in data:
-            for feature in line.split():
+            for feature in line.lower().split():
                 if feature not in self.vocabulary:
                     # we only understand our vocabulary
                     continue
@@ -120,18 +120,3 @@ class Naive_Bayes(object):
                 most_likely_label = label
                 most_likely_label_value = total_probs[label]
         return most_likely_label
-
-
-def log_add(a,b):
-    '''Adds to numbers in their logarithmic transformtions.
-
-    :param a: The first logarithmically transformed number.
-    :param b: The second logarithmically transformed number.
-    :return: The log-sum of the two numbers
-    '''
-    if b == -math.inf:
-        return a
-    if a == -math.inf:
-        return b
-
-    return a + math.log1p(math.exp(b-a))
