@@ -20,6 +20,7 @@ class Naive_Bayes(object):
 
         self.label_log_probs = dict()
         self.label_feature_log_probs = dict()
+        self.delta = 1.5
 
     def train(self, data, label):
         '''
@@ -101,18 +102,29 @@ class Naive_Bayes(object):
                 if feature not in self.vocabulary:
                     # we only understand our vocabulary
                     continue
-                # we now need to find in which label this feature is most likely to occur
-                # relative to the probability of the the probability of the label
+                # we try using only features which have some relevance
+                average_probability = 0.0
+                for label in self.label_log_probs.keys():
+                    average_probability += self.label_feature_log_probs[label][feature]
+                average_probability /= len(self.label_log_probs)
+                good_feature = False
+                for label in self.label_log_probs.keys():
+                    if self.label_feature_log_probs[label][feature] - average_probability > self.delta:
+                        good_feature = True
+                        break
+                if not good_feature:
+                    continue
 
-                #P(Y|X^n)~P(Y)*P(X1|Y)*...*P(Xn|Y)
                 for label in self.label_log_probs.keys():
                     if feature in self.label_feature_log_probs[label]:
                         if label not in total_probs:
-                            # initialize total probs lazily
+                            # initialize total probs lazily: log(1) + log(P(Y))
                             total_probs[label] = 0.0 + self.label_log_probs[label]
-                        # "multiply" log-probabilities together
+                        # "multiply" (with logs we do addition) probabilities together
+                        #P(Y|X^n)~P(Y)*P(X1|Y)*...*P(Xn|Y)
                         total_probs[label] += self.label_feature_log_probs[label][feature]
-        # label = max(P_lable * P_feature,lable)
+
+        # select the label which has the highest probability
         most_likely_label_value = -math.inf
         most_likely_label = None
         for label in total_probs.keys():
