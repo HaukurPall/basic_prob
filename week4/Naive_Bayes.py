@@ -1,7 +1,7 @@
 from collections import Counter
 from functools import reduce
 import math
-
+import re
 
 class Naive_Bayes(object):
     '''
@@ -20,7 +20,7 @@ class Naive_Bayes(object):
 
         self.label_log_probs = dict()
         self.label_feature_log_probs = dict()
-        self.delta = 1.5
+        self.delta = 1.25
 
     def train(self, data, label):
         '''
@@ -30,7 +30,8 @@ class Naive_Bayes(object):
         :param label: The label of the data
         '''
         for line in data:
-            self.add_feature_counts(line.lower().split(), label)
+            # we replace all non word characters (expect for whitespace) with nothing.
+            self.add_feature_counts(re.sub(r'([^\s\w]|_)+', '', line.lower()).split(), label)
 
     def add_feature_counts(self, features, label):
         '''
@@ -45,7 +46,7 @@ class Naive_Bayes(object):
                 self.feature_probs[label] = Counter()
             self.feature_probs[label].update([feature])
 
-    def smooth_feature_counts(self, smoothing=1):
+    def smooth_feature_counts(self, smoothing=0.1):
         '''Smooth the collected feature counts
 
         :param smoothing: The smoothing constant
@@ -98,7 +99,7 @@ class Naive_Bayes(object):
         '''
         total_probs = dict()
         for line in data:
-            for feature in line.lower().split():
+            for feature in re.sub(r'([^\s\w]|_)+', '', line.lower()).split():
                 if feature not in self.vocabulary:
                     # we only understand our vocabulary
                     continue
