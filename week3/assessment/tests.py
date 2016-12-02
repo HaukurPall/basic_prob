@@ -8,7 +8,7 @@ from random import Random
 from math import log, exp
 
 # imports the functions from logarithms module from the src folder
-from week3.assessment.second.logarithms import log_add, log_add_list, log_subtract, log_subtract_list
+from week3.assessment.third.logarithms import log_add, log_add_list, log_subtract, log_subtract_list
 
 
 class LogarithmsTest(unittest.TestCase):
