@@ -7,7 +7,7 @@ Created on Sep 23, 2015
 import sys
 import argparse
 from datetime import datetime
-from week4.Naive_Bayes import Naive_Bayes
+from week4.assessment.three.Naive_Bayes import Naive_Bayes
 from os import listdir, remove, system
 from os.path import isfile, join
 
@@ -36,7 +36,7 @@ def train_model(corpus_dir, classifier):
                 sys.exit(0)
 
     print("Starting to smooth and normalise at {}".format(datetime.now()))
-    classifier.smooth_feature_counts()
+    classifier.smooth_feature_counts(smoothing=1)
     classifier.log_normalise_label_probs()
     classifier.log_normalise_feature_probs()
 

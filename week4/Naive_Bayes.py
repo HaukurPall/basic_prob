@@ -46,7 +46,7 @@ class Naive_Bayes(object):
                 self.feature_probs[label] = Counter()
             self.feature_probs[label].update([feature])
 
-    def smooth_feature_counts(self, smoothing=0.1):
+    def smooth_feature_counts(self, smoothing=1):
         '''Smooth the collected feature counts
 
         :param smoothing: The smoothing constant
