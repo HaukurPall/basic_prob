@@ -75,7 +75,7 @@ def encode(some_string):
 
     for letter in some_string:
         encoded_string += encoding_map[letter]
-        return encoded_string
+    return encoded_string
 
 
 
@@ -99,9 +99,9 @@ def decode(some_code):
             l2 += 1
     return secret_message
 
-construct_code("war_and_peace.txt")
+construct_code("../../../war_and_peace.txt")
 print("Average code word length is {}".format(average_code_word_length()))
-print(encode("Hello World!"))
+print(decode(encode("Hello World!")))
 print(decode("101100100001100011111000110101101010010010100101101110101000110"
              "111001001101111110010111100101000101000011010111111011111110100011"
              "01001101101010001100011001100001011001110101011000010110011100001"
