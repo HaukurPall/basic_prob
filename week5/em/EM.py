@@ -135,22 +135,28 @@ class EM(object):
 
         :param observation: The observation
         '''
-        observation_probability = -float("inf")
+        component_probabilities = list()
         for component in range(self.num_components):
-            component_probability = self.mixture_weights[component] + self.component_distributions[component].log_prob(observation)
-            observation_probability = log_add(observation_probability, component_probability)
-            # we "store" the component probability
+            # prob = weigth * geo(x)
+            component_probability = self.mixture_weights[component] + self.component_distributions[component].log_prob(
+                observation)
+            component_probabilities.append(component_probability)
+        # marginal_probabilities:
+        observation_probability = log_add_list(component_probabilities)
         self.log_likelihood += observation_probability
 
-        self.expected_component_counts[component] += component_probability/observation_probability
-
         for component in range(self.num_components):
-
-            self.expected_component_counts[component] = log_add(self.expected_component_counts[component], )
-
-        self.expected_observation_counts[component] = (component_probability/observation_probability) * observation
-
-        # TODO: Implement this. Make sure to update the log-likelihood during the E-step.
+            # component/total
+            norm_comp_prob = component_probabilities[component] - observation_probability
+            self.expected_component_counts[component] = log_add(self.expected_component_counts[component],
+                                                                norm_comp_prob)
+            # we take care if observation is 0, we have to define: prob * value = -inf
+            if observation == 0:
+                self.expected_observation_counts[component] = log_add(self.expected_observation_counts[component],
+                                                                      -float("inf"))
+            else:
+                self.expected_observation_counts[component] = log_add(self.expected_observation_counts[component],
+                                                                      norm_comp_prob + log(observation))
 
     def m_step(self):
         '''Perform the M-step. This step updates
@@ -161,11 +167,20 @@ class EM(object):
         # test if the sum of the summed expected_component_counts is roughly equal to the total amount of observations
         sum_obs_counts = log_add_list(self.expected_component_counts.values())
         print("Sum of expected component counts: {}".format(exp(sum_obs_counts)))
+        # sum_obs_values = log_add_list(self.expected_observation_counts.values())
+        # print("Sum of expected observational counts: {}".format(exp(sum_obs_values)))
 
+        for component in range(self.num_components):
+            self.mixture_weights[component] = self.expected_component_counts[component] - sum_obs_counts
+            self.component_distributions[component] = GeometricDistribution(
+                exp(
+                    self.expected_component_counts[component] -
+                    (log_add(self.expected_component_counts[component], self.expected_observation_counts[component]))
+                )
+            )
 
-        # TODO: Implement this.
-        # TODO: Make sure to reset the data structures you use for counting after you have
-        # TODO: updated all parameters, namely self.expected_component_counts and self.expected_observation_counts
+            self.expected_component_counts[component] = -float("inf")
+            self.expected_observation_counts[component] = -float("inf")
 
 
 def main(data_path, number_mixture_components, initial_mixture_weights=None, initial_geometric_parameters=None):
@@ -174,7 +189,7 @@ def main(data_path, number_mixture_components, initial_mixture_weights=None, ini
 
 
 if __name__ == "__main__":
-    main('../geometric_example_data.txt', 2, [0.2, 0.8], [0.2, 0.6])
+    #main('../geometric_example_data.txt', 2, [0.2, 0.8], [0.2, 0.6])
 
     # TODO: use the following call instead when the small example above is running properly
-    # main('geometric_data.txt', 3)
+    main('../geometric_example_data.txt', 3)
