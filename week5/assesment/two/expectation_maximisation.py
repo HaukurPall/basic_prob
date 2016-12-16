@@ -2,6 +2,7 @@ import random, sys
 from math import log, exp, factorial
 from week5.em.logarithms import log_add, log_add_list
 
+### version 2, modified by Christian Schaffner on Saturday, 3 December 2016
 
 class GeometricDistribution(object):
     '''An implementation of the geometric distribution that whose support includes 0.'''
@@ -24,10 +25,10 @@ class GeometricDistribution(object):
         :raises: ValueError if x is not a non-negative integer
         '''
 
-        if x % 1 != 0 or x < 0:
+        if x%1 != 0 or x < 0:
             raise ValueError("x is not a non-negative integer")
 
-        return self.success + x * self.failure
+        return self.success + x*self.failure
 
     def get_param(self):
         '''Get the parameter of this distribution
@@ -40,7 +41,7 @@ class GeometricDistribution(object):
 class EM(object):
     '''A geometric mixture model that can be trained using EM'''
 
-    def __init__(self, num_components=5, initial_mixture_weights=None, initial_geometric_parameters=None):
+    def __init__(self, num_components = 5, initial_mixture_weights = None, initial_geometric_parameters = None):
         '''Constructor
 
         :param num_components: The number of mixture components in this model
@@ -68,20 +69,24 @@ class EM(object):
         :param initial_geometric_parameters: A list of initial component parameters (initialised randomly if no list is provided)
         '''
 
-        for component in range(self.num_components):
-            # initialize with intial parameters if provided
-            if initial_mixture_weights:
-                self.mixture_weights.append(initial_mixture_weights[component])
-            else:
+        # print(initial_geometric_parameters, initial_mixture_weights)
+
+        if initial_mixture_weights is None or initial_geometric_parameters is None:
+
+            for component in range(self.num_components):
                 self.mixture_weights.append(random.random())
-            # initialize with intial parameters if provided
-            if initial_geometric_parameters:
-                self.component_distributions.append(GeometricDistribution(initial_geometric_parameters[component]))
-            else:
                 self.component_distributions.append(GeometricDistribution(random.random()))
-            # values that are stored as logarithms are initialized as -inf = log(0)
-            self.expected_component_counts[component] = -float("inf")
-            self.expected_observation_counts[component] = -float("inf")
+                # values that are stored as logarithms are initialized as -inf = log(0)
+                self.expected_component_counts[component] = -float("inf")
+                self.expected_observation_counts[component] = -float("inf")
+        else:
+            for component in range(self.num_components):
+                self.mixture_weights.append(float(initial_mixture_weights[component])) #add float
+                self.component_distributions.append(GeometricDistribution(initial_geometric_parameters[component]))
+                # values that are stored as logarithms are initialized as -inf = log(0)
+                self.expected_component_counts[component] = -float("inf")
+                self.expected_observation_counts[component] = 0
+        # print(self.component_distributions, initial_geometric_parameters)
 
         # normalise priors
         prior_sum = sum(self.mixture_weights)
@@ -114,6 +119,8 @@ class EM(object):
 
             self.em(data_path)
 
+
+
     def em(self, data_path):
         '''Perform one iteration of EM on the data
 
@@ -126,8 +133,9 @@ class EM(object):
 
         self.m_step()
 
+
     def e_step(self, observation):
-        '''Perform the E-step on a single obervation. That is, compute the posterior of mixture components
+        '''Perform the E-step on a single observation. That is, compute the posterior of mixture components
         and add the expected occurrence of each component to the running totals
         self.log_likelihood ,
         self.expected_component_counts , and
@@ -135,28 +143,36 @@ class EM(object):
 
         :param observation: The observation
         '''
-        component_probabilities = list()
-        for component in range(self.num_components):
-            # prob = weigth * geo(x)
-            component_probability = self.mixture_weights[component] + self.component_distributions[component].log_prob(
-                observation)
-            component_probabilities.append(component_probability)
-        # marginal_probabilities:
-        observation_probability = log_add_list(component_probabilities)
-        self.log_likelihood += observation_probability
+        #TODO: Implement this. Make sure to update the log-likelihood during the E-step.
+        naive_posterior_list = list()
+        loglikelihood_list = list()
 
         for component in range(self.num_components):
-            # component/total
-            norm_comp_prob = component_probabilities[component] - observation_probability
-            self.expected_component_counts[component] = log_add(self.expected_component_counts[component],
-                                                                norm_comp_prob)
-            # we take care if observation is 0, we have to define: prob * value = -inf
-            if observation == 0:
-                self.expected_observation_counts[component] = log_add(self.expected_observation_counts[component],
-                                                                      -float("inf"))
+            # prior component weight
+            log_prior = self.mixture_weights[component]
+
+            # calculate likelihood of the observation given that component
+            prob_geo_obs = self.component_distributions[component].log_prob(observation)
+            likelihood_obs = prob_geo_obs + log_prior
+            loglikelihood_list.append(likelihood_obs)
+
+        # sum of the posteriors of that observation for the three components
+        marginal_posterior = log_add_list(loglikelihood_list)   # sum of logprobs becomes log_add
+
+        # likelihood_obs_total = sum(loglikelihood_list)
+        self.log_likelihood += marginal_posterior
+
+
+        for component in range(self.num_components):
+            posterior = loglikelihood_list[component] - marginal_posterior
+            self.expected_component_counts[component] = log_add(self.expected_component_counts[component], posterior)
+
+            observation_count = observation * exp(posterior)
+            if observation_count == 0.0:
+                continue
             else:
-                self.expected_observation_counts[component] = log_add(self.expected_observation_counts[component],
-                                                                      norm_comp_prob + log(observation))
+                log_observation_count = log(observation_count)
+                self.expected_observation_counts[component] = log_add(self.expected_observation_counts[component], log_observation_count)
 
     def m_step(self):
         '''Perform the M-step. This step updates
@@ -167,17 +183,21 @@ class EM(object):
         # test if the sum of the summed expected_component_counts is roughly equal to the total amount of observations
         sum_obs_counts = log_add_list(self.expected_component_counts.values())
         print("Sum of expected component counts: {}".format(exp(sum_obs_counts)))
-        # sum_obs_values = log_add_list(self.expected_observation_counts.values())
-        # print("Sum of expected observational counts: {}".format(exp(sum_obs_values)))
+
+        weight_list = list()
+        param_list = list()
 
         for component in range(self.num_components):
-            self.mixture_weights[component] = self.expected_component_counts[component] - sum_obs_counts
-            self.component_distributions[component] = GeometricDistribution(
-                exp(
-                    self.expected_component_counts[component] -
-                    (log_add(self.expected_component_counts[component], self.expected_observation_counts[component]))
-                )
-            )
+            new_weight = exp(self.expected_component_counts[component] - sum_obs_counts)
+            weight_list.append(new_weight)
+
+            noemer = log_add(self.expected_component_counts[component], self.expected_observation_counts[component])
+            new_param = exp(self.expected_component_counts[component] - noemer)
+            param_list.append(new_param)
+
+        for component in range(self.num_components):
+            self.mixture_weights[component] = weight_list[component] #add float
+            self.component_distributions[component] = GeometricDistribution(param_list[component])
 
             self.expected_component_counts[component] = -float("inf")
             self.expected_observation_counts[component] = -float("inf")
@@ -187,8 +207,10 @@ def main(data_path, number_mixture_components, initial_mixture_weights=None, ini
     learner = EM(int(number_mixture_components), initial_mixture_weights, initial_geometric_parameters)
     learner.train(data_path, 20)
 
-
 if __name__ == "__main__":
-    #main('../geometric_example_data.txt', 2, [0.2, 0.8], [0.2, 0.6])
-    main('../prump.txt', 2, [0.2, 0.8], [0.2, 0.6])
-    #main('../geometric_example_data.txt', 3)
+    # Please insert the initial mixture weights and parameter settings
+    #  main('geometric_data.txt', 3, [0.1, 0.8, 0.1], [0.2, 0.4, 0.2])
+
+
+    # TODO: use the following call instead when the small example above is running properly
+    main('../../geometric_example_data.txt', 3, [0.3, 0.3, 0.4], [0.2, 0.5, 0.7])
