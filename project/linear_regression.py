@@ -1,3 +1,7 @@
+from math import exp, log, sqrt, pi
+from enum import Enum
+# We use the logarithm probability implementation provided by teachers
+import project.logarithms
 
 class NormalDistribution(object):
     '''An implementation of the geometric distribution that whose support includes 0.'''
@@ -9,8 +13,9 @@ class NormalDistribution(object):
         :raises: ValueError if param is not in [0,1]
         '''
 
-        self.failure = log(1 - param)
-        self.success = log(param)
+        self.median = median
+        self.std_dev = sqrt(variance)
+        self.constant = (sqrt(2.0*pi)*self.std_dev)
 
     def log_prob(self, x):
         '''Compute the log-probability of an observation
@@ -25,12 +30,60 @@ class NormalDistribution(object):
 
         return self.success + x * self.failure
 
+    def prob(self, x):
+        '''Compute the probability of an observation
+
+        :param x: The observation
+        :return: The probability of x under this distribution
+        :raises: ValueError if x is not a non-negative integer
+        '''
+        return exp(0.5*(pow((x-self.median)/self.std_dev, 2)))/self.constant
+
     def get_param(self):
         '''Get the parameter of this distribution
 
         :return: The parameter of this distribution
         '''
-        return exp(self.success)
+        return self.median
+
+class Features(Enum):
+    '''An enum to classify different feature types. Use skip=0 to not use a certain feature'''
+    skip = 0
+    continuous = 1
+    categorical = 2
+#
+# Feature
+#     weight
+#     type
+#     if categorical then we need to be able to add a new level
+
+class LinearRegression:
+    '''A Class to represent the Linear Regression model.'''
+
+    def __init__(self, feature_selection=[Features.continuous, Features.continuous,Features.continuous],
+                 data_file_path='./data/data.txt'):
+        '''Constructor
+
+        :param feature_selection: A list which describes what features to use and how.
+        If the length of the list does not correspond to the actual feature count of the data then those features will be skipped.
+        :param data_file_path: The complete location to the data file
+        :raises: ValueError if the length of feature_selection does not
+        '''
+        self.weights = []
+        self.feature_selection = feature_selection
+        self.all_features = []
+        self.initialize(data_file_path)
+
+
+
+    def initialize(self, data_file_path):
+        with open(data_file_path) as data:
+            for line in data:
+                features = line.split()
+                self.all_features.append(features)
+        # we initialize the weights - we just use the last line.
+        for x in range(len(features)):
+            self.weights[x] = 1.0
 
     def train(self):
         # feature * coeff = prediction (continuous features)
@@ -38,7 +91,7 @@ class NormalDistribution(object):
         # feature (as categorical) |-> feature_value = predictor_1 * ceoff_f1_1
         # feature (as categorical) = 1
 
-    def evaluate_model(self):
+    def evaluate_model(self, data):
         # go over data points and calculate residuals
         # model residuals with mean = 0
         # what is the variance?
