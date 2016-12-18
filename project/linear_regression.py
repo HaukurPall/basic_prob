@@ -1,4 +1,4 @@
-from math import exp, log, sqrt, pi, pow
+from math import pow
 from enum import Enum
 import numpy as np
 
@@ -11,10 +11,6 @@ class Features(Enum):
     continuous = 1
     categorical = 2
 
-#    index in raw
- #   type
-  #  name
-   # weight
 
 class LinearRegression:
     """A Class to represent the Linear Regression model.
@@ -24,77 +20,57 @@ class LinearRegression:
         """Constructor
 
         :param feature_selection: A list which describes what features to use and how.
-        If the length of the list does not correspond to the actual feature count of the data then those features will be skipped.
         :param data_file_path: The complete location to the data file
-        :raises: ValueError if the length of feature_selection does not
         """
         self.weights = []
-        self.feature_selection = feature_selection
-        self.data = []
+        self.data = np.array([])
         self.actual_prices = []
-        self.SS_tot = 0.0
+
         # learning rate
-        self.alpha = 0.02
+        self.alpha = 0.1
+        self.SS_tot = 0.0
+
+        self.continuous_feature_count = 0
         self.categorical_features = dict()
+
+        for feature_index, feature in enumerate(feature_selection):
+            if feature == Features.categorical:
+                self.categorical_features[feature_index] = list()
+
         self.initialize(data_file_path)
 
+    def get_data_count(self):
+        return self.data.shape[0]
+
+    def get_continuous_feature_count(self):
+        return self.continuous_feature_count
+
+    def get_categorical_feature_count(self):
+        return len(list(self.categorical_features.keys()))
+
     def initialize(self, data_file_path):
-        for index, feature in enumerate(self.feature_selection):
-            if feature == Features.categorical:
-                self.categorical_features[index] = dict()
-        number_of_features = len(self.feature_selection)
-        raw_data = []
-        with open(data_file_path) as data_in:
-            next_categorical_index = 0
-            for house_data in data_in:
-                # we consider all values as float
-                features = list(map(float, house_data.split()))
-                self.actual_prices.append(features.pop(len(features) - 1))
-                # we create our x_0 and set it to 1.
-                features.append(1.0)
-                raw_data.append(features)
-                for index, feature in enumerate(features):
-                    # is it a categorical feature?
-                    if index in self.categorical_features:
-                        # have we seen it beofore?
-                        if feature not in self.categorical_features[index]:
-                            self.categorical_features[index][feature] = next_categorical_index
-                            next_categorical_index += 1
-
-        number_of_continuous_features = number_of_features
-        for key in self.categorical_features.keys():
-            number_of_features -= 1
-            number_of_features += len(self.categorical_features[key].keys())
-            number_of_continuous_features -= 1
-
-        self.data = np.zeros(shape=(len(raw_data), number_of_features))
-
-        for house_index, house_data in enumerate(raw_data):
-            # we skip the categoricals
-            index = 0
-            for feature_index, feature in enumerate(house_data):
-                if feature_index not in self.categorical_features:
-                    self.data[house_index][index] = feature
-                    index += 1
-        # we start from the same location
-        for house_index, house_data in enumerate(raw_data):
-            # we only take the categoricals
-            for feature_index, feature in enumerate(house_data):
-                if feature_index in self.categorical_features:
-                    self.data[house_index][number_of_continuous_features +
-                                           self.categorical_features[feature_index][feature]] = 1
-
-        # we do feature scaling, we skip the last continuous feature we added as 1 always
-        for x in range(number_of_continuous_features - 1):
-            minimum = np.argmin(self.data[:, x])
-            maximum = np.argmax(self.data[:, x])
-            feature_mean = np.sum(self.data.T[x]) / self.data.shape[0]
-            self.data[:, x] -= feature_mean
-            self.data[:, x] *= 1.0 / (maximum - minimum)
-
+        raw_data = read_data_set(data_file_path)
+        # we remove "y" from the raw data
+        self.actual_prices, raw_data = remove_prices(raw_data)
         mean_price = sum(self.actual_prices) / len(self.actual_prices)
         for price in self.actual_prices:
             self.SS_tot += pow(price - mean_price, 2)
+
+        raw_data = remove_categorical_features(raw_data, self.categorical_features)
+        self.continuous_feature_count = raw_data.shape[1]
+        # we set the data with a column full of 1 last.
+        self.data = np.append(raw_data, np.ones((len(raw_data), 1)), axis=1)
+        for categorical_feature in self.categorical_features.keys():
+            # add the dummy variables for the categoricals
+            self.data = np.append(self.data, create_dummy_variables(self.categorical_features[categorical_feature]), axis=1)
+
+        # we do feature scaling, we skip the last continuous feature we added as 1 always
+        for x in range(self.continuous_feature_count):
+            minimum = np.amax(self.data[:, x])
+            maximum = np.amin(self.data[:, x])
+            feature_mean = np.sum(self.data[:, x]) / self.data.shape[0]
+            self.data[:, x] -= feature_mean
+            self.data[:, x] *= 1.0 / (maximum - minimum)
 
         # we cast our data structures to np data structures
         self.weights = np.ones(self.data.shape[1])
@@ -130,6 +106,51 @@ class LinearRegression:
         return self.weights
 
 
+def create_dummy_variables(categorical_features):
+    features = dict()
+    index = 0
+    # for each categorical feature
+    for feature_index in range(categorical_features.shape[0]):
+        # we store each value it takes
+        if categorical_features[feature_index] not in features:
+            # the value the feature takes is the key, value = index
+            features[categorical_features[feature_index]] = index
+            index += 1
+    # array (502-something, 2) f.ex.
+    array = np.zeros((categorical_features.shape[0], len(list(features.keys()))))
+    for feature_index in range(categorical_features.shape[0]):
+        # we only set our key to 1
+        array[feature_index][features[categorical_features[feature_index]]] = 1
+    return array
+
+
+def remove_categorical_features(raw_data, categorical_variables):
+    removed_keys = []
+    for key in categorical_variables.keys():
+        categorical_variables[key] = raw_data[:, key]
+        removed_keys.append(key)
+    removed_keys = sorted(removed_keys)
+    removed_keys.reverse()
+    # we remove keys, the last one first
+    for key in removed_keys:
+        raw_data = np.delete(raw_data, key, axis=1)
+    return raw_data
+
+
+def remove_prices(raw_data):
+    return raw_data[:,  -1:], raw_data[:, :-1]
+
+
+def read_data_set(data_file_path):
+    raw_data = []
+    with open(data_file_path) as data_in:
+        for house_data in data_in:
+            # we consider all values as float
+            features = list(map(float, house_data.split()))
+            raw_data.append(features)
+    return np.array(raw_data)
+
+
 def run_model(lr_model, iterations):
     """A helper funciton to run loops on the linear_regression model
 
@@ -147,16 +168,16 @@ def run_model(lr_model, iterations):
 
 def main():
     lr = LinearRegression([Features.continuous,
-                           Features.categorical,
+                           Features.categorical, #2
+                           Features.continuous,
+                           Features.continuous, #4
+                           Features.categorical, #5
                            Features.continuous,
                            Features.continuous,
                            Features.continuous,
-                           Features.continuous,
-                           Features.continuous,
-                           Features.continuous,
-                           Features.continuous,
-                           Features.continuous,
-                           Features.continuous,
+                           Features.categorical, # 9
+                           Features.categorical, # 10
+                           Features.categorical, # 11
                            Features.continuous,
                            Features.continuous,
                            Features.continuous],
