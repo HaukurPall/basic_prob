@@ -6,18 +6,15 @@ import numpy as np
 # We use the logarithm probability implementation provided by teachers
 
 class Features(Enum):
-    """An enum to classify different feature types. Use skip=0 to not use a certain feature"""
+    """An enum to classify different feature types."""
     skip = 0
     continuous = 1
     categorical = 2
-    answer = 3
 
-
-#
-# Feature
-#     weight
-#     type
-#     if categorical then we need to be able to add a new level
+#    index in raw
+ #   type
+  #  name
+   # weight
 
 class LinearRegression:
     """A Class to represent the Linear Regression model.
@@ -45,29 +42,32 @@ class LinearRegression:
         for index, feature in enumerate(self.feature_selection):
             if feature == Features.categorical:
                 self.categorical_features[index] = dict()
-
+        number_of_features = len(self.feature_selection)
         raw_data = []
         with open(data_file_path) as data_in:
+            next_categorical_index = 0
             for house_data in data_in:
                 # we consider all values as float
                 features = list(map(float, house_data.split()))
-                # we create our x_0 and set it to 1.
                 self.actual_prices.append(features.pop(len(features) - 1))
-                for index, feature in enumerate(features):
-                    if index in self.categorical_features:
-                        if feature not in self.categorical_features[index]:
-                            self.categorical_features[index][feature] = -1
+                # we create our x_0 and set it to 1.
                 features.append(1.0)
                 raw_data.append(features)
+                for index, feature in enumerate(features):
+                    # is it a categorical feature?
+                    if index in self.categorical_features:
+                        # have we seen it beofore?
+                        if feature not in self.categorical_features[index]:
+                            self.categorical_features[index][feature] = next_categorical_index
+                            next_categorical_index += 1
 
-        number_of_continuous_features = len(raw_data[0])
-        number_of_columns = len(raw_data[0])
+        number_of_continuous_features = number_of_features
         for key in self.categorical_features.keys():
-            number_of_columns -= 1
+            number_of_features -= 1
+            number_of_features += len(self.categorical_features[key].keys())
             number_of_continuous_features -= 1
-            number_of_columns += len(self.categorical_features[key].keys())
 
-        self.data = np.zeros(shape=(len(raw_data), number_of_columns))
+        self.data = np.zeros(shape=(len(raw_data), number_of_features))
 
         for house_index, house_data in enumerate(raw_data):
             # we skip the categoricals
@@ -81,11 +81,8 @@ class LinearRegression:
             # we only take the categoricals
             for feature_index, feature in enumerate(house_data):
                 if feature_index in self.categorical_features:
-                    # we havn't seen this one before
-                    if self.categorical_features[feature_index][feature] == -1:
-                        self.categorical_features[feature_index][feature] = index
-                        index += 1
-                    self.data[house_index][self.categorical_features[feature_index][feature]] = 1
+                    self.data[house_index][number_of_continuous_features +
+                                           self.categorical_features[feature_index][feature]] = 1
 
         # we do feature scaling, we skip the last continuous feature we added as 1 always
         for x in range(number_of_continuous_features - 1):
@@ -95,17 +92,12 @@ class LinearRegression:
             self.data[:, x] -= feature_mean
             self.data[:, x] *= 1.0 / (maximum - minimum)
 
-        for x in range(self.data.shape[1]):
-            self.weights.append(0.0)
-
         mean_price = sum(self.actual_prices) / len(self.actual_prices)
         for price in self.actual_prices:
             self.SS_tot += pow(price - mean_price, 2)
 
-        self.weights[0] = mean_price
         # we cast our data structures to np data structures
-        self.weights = np.array(self.weights)
-        self.data = np.array(self.data)
+        self.weights = np.ones(self.data.shape[1])
 
     def train(self):
         new_weights = []
@@ -129,12 +121,13 @@ class LinearRegression:
         # go over data points and calculate residuals
         # model residuals with mean = 0
         SS_res = 0.0
-        for observation in range(len(self.data)):
+        for observation in range(self.data.shape[0]):
             prediction = self.predict(self.data[observation])
             SS_res += pow(self.actual_prices[observation] - prediction, 2)
         return 1 - (SS_res / self.SS_tot)
-        # what is the variance?
-        # R²=1-(sum(x_i-w.T*predict(x_i))²/sum(x_i-(1/n)*sum(x_i))² -> 1
+
+    def get_weights(self):
+        return self.weights
 
 
 def run_model(lr_model, iterations):
@@ -149,23 +142,24 @@ def run_model(lr_model, iterations):
         iterations -= 1
         value = lr_model.evaluate_model()
         print(str(value))
+    print("Final weights: {}".format(lr_model.get_weights()))
 
 
 def main():
     lr = LinearRegression([Features.continuous,
-                           Features.continuous,
-                           Features.continuous,
                            Features.categorical,
                            Features.continuous,
                            Features.continuous,
                            Features.continuous,
                            Features.continuous,
-                           Features.categorical,
                            Features.continuous,
                            Features.continuous,
                            Features.continuous,
                            Features.continuous,
-                           Features.answer],
+                           Features.continuous,
+                           Features.continuous,
+                           Features.continuous,
+                           Features.continuous],
                           './data/data.txt')
     run_model(lr, 300)
 
