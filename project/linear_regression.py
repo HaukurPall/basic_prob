@@ -73,12 +73,12 @@ class LinearRegression:
             self.data[:, x] *= 1.0 / (maximum - minimum)
 
         # we cast our data structures to np data structures
-        self.weights = np.ones(self.data.shape[1])
+        self.weights = np.ones((self.data.shape[1], 1))
 
     def train(self):
         new_weights = []
-        summed_up = 0.0
         for weight_index in range(self.weights.shape[0]):
+            summed_up = 0.0
             for i in range(self.data.shape[0]):
                 summed_up += (self.predict(self.data[i]) - self.actual_prices[i]) * self.data[i][weight_index]
             new_weights.append(self.weights[weight_index] - self.alpha * summed_up / self.data.shape[0])
@@ -170,7 +170,7 @@ def main():
     lr = LinearRegression([Features.continuous,
                            Features.categorical, #2
                            Features.continuous,
-                           Features.continuous, #4
+                           Features.continuous,
                            Features.categorical, #5
                            Features.continuous,
                            Features.continuous,
