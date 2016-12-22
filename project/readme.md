@@ -9,7 +9,7 @@ The program can be adjusted in the code to run it with different feature selecti
 numpy and matplotlib installed. These are not required by the model to run so the code can be adjusted to remove these requirements without breaking the linear regression model itself.
 
 # Contents of file
-* lr.py is the code for the linear regression model
+* linear_regression.py is the code for the linear regression model
 * readme.md is this file
 * report.pdf is the report of the project
 
