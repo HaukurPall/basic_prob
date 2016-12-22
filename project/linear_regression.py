@@ -1,5 +1,6 @@
 from math import pow
 from enum import Enum
+import sys
 import numpy as np
 
 
@@ -33,22 +34,20 @@ class LinearRegression:
         self.continuous_feature_count = 0
         self.categorical_features = dict()
 
+        self.skip_features = list()
         for feature_index, feature in enumerate(feature_selection):
             if feature == Features.categorical:
                 self.categorical_features[feature_index] = list()
+            elif feature == Features.skip:
+                self.skip_features.append(feature_index)
 
         self.initialize(data_file_path)
 
-    def get_data_count(self):
-        return self.data.shape[0]
-
-    def get_continuous_feature_count(self):
-        return self.continuous_feature_count
-
-    def get_categorical_feature_count(self):
-        return len(list(self.categorical_features.keys()))
-
     def initialize(self, data_file_path):
+        """Reads a file and prepares the data for learning.
+
+        :param data_file_path: The path to the data file
+        """
         raw_data = read_data_set(data_file_path)
         # we remove "y" from the raw data
         self.actual_prices, raw_data = remove_prices(raw_data)
@@ -57,9 +56,15 @@ class LinearRegression:
             self.SS_tot += pow(price - mean_price, 2)
 
         raw_data = remove_categorical_features(raw_data, self.categorical_features)
+        raw_data = remove_skip_features(raw_data, self.skip_features)
         self.continuous_feature_count = raw_data.shape[1]
         # we set the data with a column full of 1 last.
         self.data = np.append(raw_data, np.ones((len(raw_data), 1)), axis=1)
+
+        #self.data = np.append(self.data, np.power(self.data[:, 0].T, 2), axis=1)
+        #for index in range(self.continuous_feature_count):
+        #    self.data = np.append(self.data, np.power(self.data[:, index], 2), axis=1)
+
         for categorical_feature in self.categorical_features.keys():
             # add the dummy variables for the categoricals
             self.data = np.append(self.data, create_dummy_variables(self.categorical_features[categorical_feature]), axis=1)
@@ -76,24 +81,31 @@ class LinearRegression:
         self.weights = np.ones((self.data.shape[1], 1))
 
     def train(self):
+        """ Run one iteration to get new weights
+        """
         new_weights = []
+        # (X^T*X)^-1X^Ty
         for weight_index in range(self.weights.shape[0]):
             summed_up = 0.0
             for i in range(self.data.shape[0]):
-                summed_up += (self.predict(self.data[i]) - self.actual_prices[i]) * self.data[i][weight_index]
-            new_weights.append(self.weights[weight_index] - self.alpha * summed_up / self.data.shape[0])
+                summed_up += ((self.predict(self.data[i]) - self.actual_prices[i]) * self.data[i][weight_index])
+            new_weights.append(self.weights[weight_index] - (self.alpha * (summed_up / self.data.shape[0])))
         self.weights = np.array(new_weights)
 
     def predict(self, features):
-        '''
+        '''Predict based on current weights and given features
 
-        :param features: array of features
-        :param price:
-        :return:
+        :param features: An array of features
+        :return: prediction based on features and weights
         '''
         return np.dot(self.weights.T, features)
 
     def evaluate_model(self):
+        """Evaluate model.
+        We use R^2
+
+        :return: An evalutation of the model.
+        """
         # go over data points and calculate residuals
         # model residuals with mean = 0
         SS_res = 0.0
@@ -103,10 +115,19 @@ class LinearRegression:
         return 1 - (SS_res / self.SS_tot)
 
     def get_weights(self):
+        """Return current weights
+
+        :return: Current weights
+        """
         return self.weights
 
 
 def create_dummy_variables(categorical_features):
+    """Break a categorical variable to multiple values
+
+    :param categorical_features: An array of assignments the categorical value takes
+    :return: an array
+    """
     features = dict()
     index = 0
     # for each categorical feature
@@ -134,6 +155,13 @@ def remove_categorical_features(raw_data, categorical_variables):
     # we remove keys, the last one first
     for key in removed_keys:
         raw_data = np.delete(raw_data, key, axis=1)
+    return raw_data
+
+
+def remove_skip_features(raw_data, skip_features):
+    skip_features.reverse()
+    for index in skip_features:
+        raw_data = raw_data = np.delete(raw_data, index, axis=1)
     return raw_data
 
 
@@ -166,24 +194,23 @@ def run_model(lr_model, iterations):
     print("Final weights: {}".format(lr_model.get_weights()))
 
 
-def main():
-    lr = LinearRegression([Features.continuous,
-                           Features.categorical, #2
-                           Features.continuous,
-                           Features.continuous,
-                           Features.categorical, #5
-                           Features.continuous,
-                           Features.continuous,
-                           Features.continuous,
-                           Features.categorical, # 9
-                           Features.categorical, # 10
-                           Features.categorical, # 11
-                           Features.continuous,
-                           Features.continuous,
+def main(arguments):
+    lr = LinearRegression([Features.skip,
+                           Features.skip, #2
+                           Features.skip,
+                           Features.skip,
+                           Features.skip, #5
+                           Features.skip,
+                           Features.skip,
+                           Features.skip,
+                           Features.skip, # 9
+                           Features.skip, # 10
+                           Features.skip, # 11
+                           Features.skip,
                            Features.continuous],
-                          './data/data.txt')
-    run_model(lr, 300)
+                          arguments[1])
+    run_model(lr, int(arguments[2]))
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
